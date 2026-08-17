@@ -1,4 +1,4 @@
-package com.openTwin.backend;
+package com.opentwin.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
