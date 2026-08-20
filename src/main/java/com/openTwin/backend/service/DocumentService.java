@@ -2,10 +2,13 @@ package com.opentwin.backend.service;
 
 import com.opentwin.backend.entity.Document;
 import com.opentwin.backend.entity.User;
+import com.opentwin.backend.model.TextChunk;
 import com.opentwin.backend.repository.DocumentRepository;
 import com.opentwin.backend.repository.UserRepository;
+import com.opentwin.backend.service.embedding.EmbeddingService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.*;
 
 import java.io.IOException;
 
@@ -18,18 +21,27 @@ public class DocumentService {
 
     private final DocumentExtractionService documentExtractionService;
 
+    private final TextProcessingService textProcessingService;
+
+    private final EmbeddingService embeddingService;
+    private final QdrantVectorService qdrantVectorService;
+
     public DocumentService(
             DocumentRepository documentRepository,
             UserRepository userRepository,
             FileStorageService fileStorageService,
-
-            DocumentExtractionService documentExtractionService
+            DocumentExtractionService documentExtractionService,
+            TextProcessingService textProcessingService,
+            EmbeddingService embeddingService,
+            QdrantVectorService qdrantVectorService
     ) {
         this.documentRepository = documentRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
-
         this.documentExtractionService = documentExtractionService;
+        this.textProcessingService = textProcessingService;
+        this.embeddingService = embeddingService;
+        this.qdrantVectorService = qdrantVectorService;
     }
 
     public Document uploadDocument(
@@ -64,24 +76,62 @@ public class DocumentService {
 
         document.setUser(user);
 
-        // temp test
+        /*
+         * Saving first so PostgreSQL generates the document ID.
+         */
+        Document savedDocument =
+                documentRepository.save(document);
 
-        String extractedText =
-                null;
+        String extractedText;
+
         try {
+
             extractedText =
                     documentExtractionService.extractText(
                             file,
                             contentType
                     );
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+
+        } catch (IOException exception) {
+
+            throw new RuntimeException(
+                    "Failed to extract document text",
+                    exception
+            );
         }
 
-        System.out.println("===== EXTRACTED TEXT =====");
-        System.out.println(extractedText);
-        System.out.println("==========================");
+        List<TextChunk> chunks =
+                textProcessingService.createChunks(
+                        savedDocument.getId(),
+                        extractedText
+                );
 
-        return documentRepository.save(document);
+        System.out.println("===== CHUNKS =====");
+
+        for (TextChunk chunk : chunks) {
+
+            System.out.println(
+                    "Chunk " +
+                            chunk.getChunkIndex() +
+                            ": " +
+                            chunk.getContent()
+            );
+
+            List<Float> embedding =
+                    embeddingService.generateDocumentEmbedding(
+                            chunk.getContent()
+                    );
+
+            qdrantVectorService.storeChunkEmbedding(
+                    savedDocument.getUser().getId(),
+                    chunk.getDocumentId(),
+                    chunk.getChunkIndex(),
+                    embedding
+            );
+        }
+
+        System.out.println("==================");
+
+        return savedDocument;
     }
 }
