@@ -31,6 +31,7 @@ public class QdrantVectorService {
             Long userId,
             Long documentId,
             int chunkIndex,
+            String content,
             List<Float> embedding) {
 
         if (embedding == null || embedding.isEmpty()) {
@@ -55,7 +56,9 @@ public class QdrantVectorService {
                                         "documentId",
                                         ValueFactory.value(documentId),
                                         "chunkIndex",
-                                        ValueFactory.value(chunkIndex)
+                                        ValueFactory.value(chunkIndex),
+                                        "content",
+                                        ValueFactory.value(content)
                                 )
                         )
                         .build();

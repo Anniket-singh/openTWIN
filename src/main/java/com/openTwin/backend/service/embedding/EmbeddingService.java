@@ -76,4 +76,55 @@ public class EmbeddingService {
 
         return vector;
     }
+
+    public List<Float> generateQueryEmbedding(String query) {
+
+        if (query == null || query.isBlank()) {
+            throw new IllegalArgumentException("Query cannot be empty");
+        }
+
+        EmbedContentConfig config = EmbedContentConfig.builder()
+                .taskType("RETRIEVAL_QUERY")
+                .outputDimensionality(embeddingDimension)
+                .build();
+
+        EmbedContentResponse response =
+                geminiClient.models.embedContent(
+                        embeddingModel,
+                        query,
+                        config
+                );
+
+        List<ContentEmbedding> embeddings =
+                response.embeddings()
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Gemini returned no query embedding"
+                                ));
+
+        if (embeddings.isEmpty()) {
+            throw new IllegalStateException(
+                    "Gemini returned an empty query embedding"
+            );
+        }
+
+        List<Float> vector =
+                embeddings.get(0)
+                        .values()
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Gemini returned a query embedding without values"
+                                ));
+
+        if (vector.size() != embeddingDimension) {
+            throw new IllegalStateException(
+                    "Unexpected query embedding dimension. Expected "
+                            + embeddingDimension
+                            + " but received "
+                            + vector.size()
+            );
+        }
+
+        return vector;
+    }
 }

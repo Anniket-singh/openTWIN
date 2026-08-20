@@ -126,6 +126,7 @@ public class DocumentService {
                     savedDocument.getUser().getId(),
                     chunk.getDocumentId(),
                     chunk.getChunkIndex(),
+                    chunk.getContent(),
                     embedding
             );
         }
