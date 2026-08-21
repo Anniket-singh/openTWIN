@@ -42,9 +42,21 @@ public class SemanticRetrievalService {
             );
         }
 
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Query cannot be empty"
+            );
+        }
+
         if (limit <= 0) {
             throw new IllegalArgumentException(
                     "Limit must be greater than zero"
+            );
+        }
+
+        if (limit > 20) {
+            throw new IllegalArgumentException(
+                    "Limit cannot be greater than 20"
             );
         }
 
