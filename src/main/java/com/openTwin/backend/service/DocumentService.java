@@ -135,4 +135,8 @@ public class DocumentService {
 
         return savedDocument;
     }
+
+    public List<Document> getUserDocuments(Long userId) {
+        return documentRepository.findByUserId(userId);
+    }
 }

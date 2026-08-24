@@ -1,24 +1,28 @@
 package com.opentwin.backend.service;
 
+import com.opentwin.backend.entity.Document;
 import com.opentwin.backend.model.RagResponse;
-import com.opentwin.backend.model.RetrievedChunk;
-import org.springframework.stereotype.Service;
 import com.opentwin.backend.model.RagSource;
+import com.opentwin.backend.model.RetrievedChunk;
+import com.opentwin.backend.repository.DocumentRepository;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
-
 @Service
 public class RagService {
 
     private final SemanticRetrievalService semanticRetrievalService;
     private final GeminiService geminiService;
+    private final DocumentRepository documentRepository;
 
     public RagService(
             SemanticRetrievalService semanticRetrievalService,
-            GeminiService geminiService
+            GeminiService geminiService,
+            DocumentRepository documentRepository
     ) {
         this.semanticRetrievalService = semanticRetrievalService;
         this.geminiService = geminiService;
+        this.documentRepository = documentRepository;
     }
 
     public RagResponse answerQuestion(
@@ -83,13 +87,25 @@ public class RagService {
 
         List<RagSource> sources =
                 retrievedChunks.stream()
-                        .map(chunk ->
-                                new RagSource(
-                                        chunk.getDocumentId(),
-                                        chunk.getChunkIndex(),
-                                        chunk.getScore()
-                                )
-                        )
+                        .map(chunk -> {
+
+                            Document document =
+                                    documentRepository
+                                            .findById(chunk.getDocumentId())
+                                            .orElse(null);
+
+                            String documentName =
+                                    document != null
+                                            ? document.getOriginalFilename()
+                                            : "Unknown document";
+
+                            return new RagSource(
+                                    chunk.getDocumentId(),
+                                    documentName,
+                                    chunk.getChunkIndex(),
+                                    chunk.getScore()
+                            );
+                        })
                         .toList();
 
         return new RagResponse(

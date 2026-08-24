@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 import java.util.Locale;
 
 import java.util.Set;
@@ -73,6 +75,22 @@ public class DocumentController {
         );
 
         return ResponseEntity.ok("File uploaded successfully");
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Document>> getUserDocuments() {
+
+        String userIdString = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal()
+                .toString();
+
+        Long userId = Long.parseLong(userIdString);
+
+        return ResponseEntity.ok(
+                documentService.getUserDocuments(userId)
+        );
     }
 
     private String resolveContentType(MultipartFile file) {
