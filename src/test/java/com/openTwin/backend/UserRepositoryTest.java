@@ -3,6 +3,7 @@ package com.opentwin.backend;
 import com.opentwin.backend.entity.User;
 import com.opentwin.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -17,9 +18,11 @@ class UserRepositoryTest {
     @Test
     void shouldSaveAndFindUser() {
 
+        String email = "test-" + UUID.randomUUID() + "@opentwin.com";
+
         User user = new User(
                 "Test User",
-                "test@opentwin.com",
+                email,
                 "test-password"
         );
 
@@ -32,6 +35,6 @@ class UserRepositoryTest {
                 .orElseThrow();
 
         assertEquals("Test User", foundUser.getName());
-        assertEquals("test@opentwin.com", foundUser.getEmail());
+        assertEquals(email, foundUser.getEmail());
     }
 }

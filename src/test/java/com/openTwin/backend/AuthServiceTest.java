@@ -5,6 +5,7 @@ import com.opentwin.backend.entity.User;
 import com.opentwin.backend.repository.UserRepository;
 import com.opentwin.backend.service.AuthService;
 import org.junit.jupiter.api.Test;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,7 +29,8 @@ class AuthServiceTest {
 
         RegisterRequest request = new RegisterRequest();
         request.setName("Test User");
-        request.setEmail("auth-test@opentwin.com");
+        String email = "auth-test-" + UUID.randomUUID() + "@opentwin.com";
+        request.setEmail(email);
         request.setPassword("testPassword123");
 
         User savedUser = authService.register(request);
@@ -48,7 +50,7 @@ class AuthServiceTest {
         );
 
         assertTrue(
-                userRepository.existsByEmail("auth-test@opentwin.com")
+                userRepository.existsByEmail(email)
         );
     }
 }

@@ -1,22 +1,34 @@
 package com.opentwin.backend;
 
+import com.opentwin.backend.entity.User;
 import com.opentwin.backend.service.JwtService;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.lang.reflect.Field;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JwtServiceTest {
 
     @Test
-    void shouldValidateGeneratedToken() {
+    void shouldValidateGeneratedToken() throws Exception {
 
         JwtService jwtService = new JwtService(
                 "secretekey2026dxcvhjklpoiufdfbnkiufdcdfghgfdxcvbndsdfsdfxvbnklihghokjhgh",
                 900000
         );
 
-        // Replace this with the JWT you received from /api/auth/login
-        String token = "hello.world.test";
+        User user = new User(
+                "Test User",
+                "test@example.com",
+                "test-password"
+        );
+
+        Field idField = User.class.getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(user, 1L);
+
+        String token = jwtService.generateToken(user);
 
         boolean valid = jwtService.isTokenValid(token);
 

@@ -36,10 +36,24 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<String> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException exception) {
+    public ResponseEntity<String> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException exception
+    ) {
 
         return ResponseEntity
                 .status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body("File size cannot exceed 10 MB");
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleGenericException(
+            Exception exception
+    ) {
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                        "error", "An unexpected error occurred. Please try again later."
+                ));
     }
 }
