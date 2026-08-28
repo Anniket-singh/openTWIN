@@ -12,11 +12,13 @@ public class QdrantConfig {
     @Bean
     public QdrantClient qdrantClient(
             @Value("${qdrant.host}") String host,
-            @Value("${qdrant.grpc-port}") int grpcPort) {
+            @Value("${qdrant.grpc-port}") int grpcPort,
+            @Value("${qdrant.api-key}") String apiKey) {
 
         return new QdrantClient(
                 QdrantGrpcClient
-                        .newBuilder(host, grpcPort, false)
+                        .newBuilder(host, grpcPort, true)
+                        .withApiKey(apiKey)
                         .build()
         );
     }
