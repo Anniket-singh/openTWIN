@@ -1,8 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
-const API_BASE_URL = "http://localhost:8080";
 
 function getErrorMessage(error) {
     const responseData = error.response?.data;
@@ -42,7 +42,7 @@ function Register() {
         setLoading(true);
 
         try {
-            await axios.post(`${API_BASE_URL}/api/auth/register`, {
+            await api.post("/api/auth/register", {
                 name: name.trim(),
                 email: email.trim(),
                 password,

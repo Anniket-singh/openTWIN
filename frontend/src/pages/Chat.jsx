@@ -3,6 +3,8 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import ReactMarkdown from "react-markdown";
 
+import api from "../api/axios";
+
 function Chat() {
     const { token } = useAuth();
 
@@ -25,12 +27,10 @@ function Chat() {
         setSources([]);
 
         try {
-            const response = await axios.get(
-                "http://localhost:8080/api/rag/ask",
-                {
-                    params: {
-                        question: question
-                    },
+            const response = await api.get("/api/rag/ask", {
+                params: {
+                    question: question
+                },
                     headers: {
                         Authorization: `Bearer ${token}`
                     }

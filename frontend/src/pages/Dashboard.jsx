@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
+import api from "../api/axios";
 
 function Dashboard() {
     const { token, logout } = useAuth();
@@ -21,12 +22,10 @@ function Dashboard() {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const response = await axios.get(
-                    "http://localhost:8080/api/auth/me",
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
+                const response = await api.get("/api/auth/me", {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
                     }
                 );
 
@@ -45,12 +44,10 @@ function Dashboard() {
     useEffect(() => {
         const fetchDocuments = async () => {
             try {
-                const response = await axios.get(
-                    "http://localhost:8080/api/documents",
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
+                const response = await api.get("/api/documents", {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
                     }
                 );
 
@@ -76,12 +73,10 @@ function Dashboard() {
 
     const fetchDocuments = async () => {
         try {
-            const response = await axios.get(
-                "http://localhost:8080/api/documents",
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+            const response = await api.get("/api/documents", {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
                 }
             );
 
@@ -124,8 +119,8 @@ function Dashboard() {
             console.log("Upload token:", token);
             console.log("Selected file:", selectedFile);
 
-            const response = await axios.post(
-                "http://localhost:8080/api/documents/upload",
+            const response = await api.post(
+                "/api/documents/upload",
                 formData,
                 {
                     headers: {
