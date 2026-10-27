@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import ReactMarkdown from "react-markdown";
 
@@ -45,10 +44,11 @@ function Chat() {
 
             if (error.response?.status === 401) {
                 setError("Your session has expired. Please log in again.");
+            } else if (error.response?.status === 503) {
+                setError(error.response?.data?.error || "Vector search database is currently unavailable. AI retrieval will resume once the cluster is reachable.");
             } else {
-                setError("Something went wrong. Please try again.");
+                setError(error.userMessage || error.response?.data?.error || "Something went wrong. Please try again.");
             }
-
         } finally {
             setLoading(false);
         }

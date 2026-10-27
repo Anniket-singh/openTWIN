@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -27,20 +26,22 @@ function Login() {
             const response = await api.post(
                 "/api/auth/login",
                 {
-                    email,
+                    email: email.trim(),
                     password
                 }
             );
     
             login(response.data.token);
     
-            console.log("Login successful!");
             setMessage("Login successful!");
-
             navigate("/dashboard");
         } catch (error) {
             console.error("Login failed:", error);
-            setError("Invalid email or password.");
+            const msg = error.userMessage
+                || error.response?.data?.error
+                || (error.code === 'ECONNABORTED' ? "Request timed out. The backend server may be starting up, please try again." : null)
+                || (!error.response ? "Cannot connect to server. Please check if the backend is running." : "Invalid email or password.");
+            setError(msg);
         } finally {
             setLoading(false);
         }

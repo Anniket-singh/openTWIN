@@ -33,4 +33,30 @@ public class DocumentExtractionService {
                 )
                 .extractText(file);
     }
+
+    public String extractTextFromBytes(
+            byte[] bytes,
+            String contentType
+    ) throws IOException {
+        if ("application/pdf".equals(contentType)) {
+            try (org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.Loader.loadPDF(bytes)) {
+                return new org.apache.pdfbox.text.PDFTextStripper().getText(document);
+            }
+        }
+        if ("application/vnd.openxmlformats-officedocument.wordprocessingml.document".equals(contentType)) {
+            try (org.apache.poi.xwpf.usermodel.XWPFDocument document =
+                         new org.apache.poi.xwpf.usermodel.XWPFDocument(new java.io.ByteArrayInputStream(bytes))) {
+                StringBuilder text = new StringBuilder();
+                for (org.apache.poi.xwpf.usermodel.XWPFParagraph paragraph : document.getParagraphs()) {
+                    text.append(paragraph.getText());
+                    text.append(System.lineSeparator());
+                }
+                return text.toString();
+            }
+        }
+        if ("text/plain".equals(contentType)) {
+            return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        throw new IllegalArgumentException("Unsupported document type: " + contentType);
+    }
 }

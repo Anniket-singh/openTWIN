@@ -139,4 +139,62 @@ public class DocumentService {
     public List<Document> getUserDocuments(Long userId) {
         return documentRepository.findByUserId(userId);
     }
+
+    public int reindexDocument(Long documentId, Long userId) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found with id: " + documentId));
+
+        if (userId != null && !document.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Access denied: You do not own this document");
+        }
+
+        java.nio.file.Path filePath = java.nio.file.Paths.get(document.getStoredFilePath());
+        if (!java.nio.file.Files.exists(filePath)) {
+            throw new IllegalStateException("Stored file does not exist on disk: " + document.getStoredFilePath());
+        }
+
+        try {
+            byte[] fileBytes = java.nio.file.Files.readAllBytes(filePath);
+            String extractedText = documentExtractionService.extractTextFromBytes(fileBytes, document.getContentType());
+            List<TextChunk> chunks = textProcessingService.createChunks(document.getId(), extractedText);
+
+            for (TextChunk chunk : chunks) {
+                List<Float> embedding = embeddingService.generateDocumentEmbedding(chunk.getContent());
+                qdrantVectorService.storeChunkEmbedding(
+                        document.getUser().getId(),
+                        chunk.getDocumentId(),
+                        chunk.getChunkIndex(),
+                        chunk.getContent(),
+                        embedding
+                );
+            }
+            return chunks.size();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read file for re-indexing", e);
+        }
+    }
+
+    public Map<String, Object> reindexUserDocuments(Long userId) {
+        List<Document> documents = documentRepository.findByUserId(userId);
+        int successCount = 0;
+        int totalChunks = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (Document doc : documents) {
+            try {
+                int chunks = reindexDocument(doc.getId(), userId);
+                totalChunks += chunks;
+                successCount++;
+            } catch (Exception e) {
+                errors.add("Document '" + doc.getOriginalFilename() + "' (ID " + doc.getId() + "): " + e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalDocuments", documents.size());
+        result.put("successfulDocuments", successCount);
+        result.put("totalChunksIndexed", totalChunks);
+        result.put("errors", errors);
+        return result;
+    }
 }

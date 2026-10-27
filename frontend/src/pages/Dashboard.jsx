@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
@@ -137,10 +136,12 @@ function Dashboard() {
         } catch (error) {
             console.error("Upload failed:", error);
 
-            if (error.response?.data) {
+            if (error.response?.data?.error) {
+                setUploadMessage(error.response.data.error);
+            } else if (typeof error.response?.data === "string") {
                 setUploadMessage(error.response.data);
             } else {
-                setUploadMessage("Upload failed. Please try again.");
+                setUploadMessage(error.userMessage || "Upload failed. Please try again.");
             }
 
         } finally {

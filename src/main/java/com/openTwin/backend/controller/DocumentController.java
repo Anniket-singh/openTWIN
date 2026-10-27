@@ -93,6 +93,36 @@ public class DocumentController {
         );
     }
 
+    @PostMapping("/reindex")
+    public ResponseEntity<java.util.Map<String, Object>> reindexAll() {
+        String userIdString = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal()
+                .toString();
+
+        Long userId = Long.parseLong(userIdString);
+        java.util.Map<String, Object> result = documentService.reindexUserDocuments(userId);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{id}/reindex")
+    public ResponseEntity<java.util.Map<String, Object>> reindexOne(@PathVariable("id") Long documentId) {
+        String userIdString = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal()
+                .toString();
+
+        Long userId = Long.parseLong(userIdString);
+        int chunks = documentService.reindexDocument(documentId, userId);
+        return ResponseEntity.ok(java.util.Map.of(
+                "documentId", documentId,
+                "chunksIndexed", chunks,
+                "message", "Document reindexed successfully"
+        ));
+    }
+
     private String resolveContentType(MultipartFile file) {
 
         String contentType = file.getContentType();
