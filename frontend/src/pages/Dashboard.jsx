@@ -18,6 +18,9 @@ function Dashboard() {
     const [documentsLoading, setDocumentsLoading] = useState(true);
     const [documentsError, setDocumentsError] = useState("");
 
+    const [reindexing, setReindexing] = useState(false);
+    const [reindexMessage, setReindexMessage] = useState("");
+
     useEffect(() => {
         const fetchUser = async () => {
             try {
@@ -150,6 +153,33 @@ function Dashboard() {
         }
     };
 
+    const handleReindex = async () => {
+        setReindexing(true);
+        setReindexMessage("");
+
+        try {
+            const response = await api.post(
+                "/api/documents/reindex",
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
+                    timeout: 90000
+                }
+            );
+
+            const data = response.data;
+            setReindexMessage(`Synced ${data.successfulDocuments || 0} of ${data.totalDocuments || 0} document(s) (${data.totalChunksIndexed || 0} chunks).`);
+            await fetchDocuments();
+        } catch (error) {
+            console.error("Reindex failed:", error);
+            setReindexMessage(error.response?.data?.error || "Sync failed. Try uploading your document again.");
+        } finally {
+            setReindexing(false);
+        }
+    };
+
 
     return (
         <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
@@ -239,15 +269,33 @@ function Dashboard() {
                 </div>
 
                 <div className="mt-12 w-full max-w-3xl">
-                    <div className="mb-4">
-                        <h2 className="text-2xl font-bold text-white">
-                            Your Knowledge
-                        </h2>
+                    <div className="mb-4 flex items-center justify-between">
+                        <div className="text-left">
+                            <h2 className="text-2xl font-bold text-white">
+                                Your Knowledge
+                            </h2>
 
-                        <p className="mt-1 text-sm text-slate-400">
-                            Documents currently connected to your Twin.
-                        </p>
+                            <p className="mt-1 text-sm text-slate-400">
+                                Documents currently connected to your Twin.
+                            </p>
+                        </div>
+
+                        {documents.length > 0 && (
+                            <button
+                                onClick={handleReindex}
+                                disabled={reindexing}
+                                className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-400 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {reindexing ? "Syncing..." : "Sync Knowledge"}
+                            </button>
+                        )}
                     </div>
+
+                    {reindexMessage && (
+                        <p className="mb-4 text-sm text-emerald-400">
+                            {reindexMessage}
+                        </p>
+                    )}
 
                     {documentsLoading ? (
                         <p className="text-slate-400">

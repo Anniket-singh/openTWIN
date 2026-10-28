@@ -49,12 +49,20 @@ public class RagService {
             );
         }
 
-        List<RetrievedChunk> retrievedChunks =
-                semanticRetrievalService.search(
-                        question,
-                        userId,
-                        limit
-                );
+        List<RetrievedChunk> retrievedChunks;
+        try {
+            retrievedChunks =
+                    semanticRetrievalService.search(
+                            question,
+                            userId,
+                            limit
+                    );
+        } catch (Exception e) {
+            return new RagResponse(
+                    "Your knowledge base has not been indexed yet or is temporarily synchronizing. Please upload or re-sync your documents on the Dashboard, then try again.",
+                    List.of()
+            );
+        }
 
         /*
          * No relevant knowledge was retrieved.

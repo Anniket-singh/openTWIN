@@ -2,12 +2,14 @@ package com.opentwin.backend.service;
 
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.grpc.Collections.Distance;
+import io.qdrant.client.grpc.Collections.PayloadSchemaType;
 import io.qdrant.client.grpc.Collections.VectorParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -53,6 +55,22 @@ public class QdrantCollectionService {
                 log.info("Collection '{}' created successfully.", collectionName);
             } else {
                 log.info("Collection '{}' already exists and is ready.", collectionName);
+            }
+
+            // Ensure payload index on userId exists for strict mode filtering
+            try {
+                qdrantClient.createPayloadIndexAsync(
+                        collectionName,
+                        "userId",
+                        PayloadSchemaType.Integer,
+                        null,
+                        true,
+                        null,
+                        Duration.ofSeconds(10)
+                ).get();
+                log.info("Payload index for 'userId' ensured on collection '{}'.", collectionName);
+            } catch (Exception indexException) {
+                log.info("Payload index note for 'userId': {}", indexException.getMessage());
             }
 
             available.set(true);
