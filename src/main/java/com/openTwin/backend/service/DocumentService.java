@@ -6,6 +6,7 @@ import com.opentwin.backend.model.TextChunk;
 import com.opentwin.backend.repository.DocumentRepository;
 import com.opentwin.backend.repository.UserRepository;
 import com.opentwin.backend.service.embedding.EmbeddingService;
+import io.qdrant.client.grpc.Points.PointStruct;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
@@ -25,6 +26,7 @@ public class DocumentService {
 
     private final EmbeddingService embeddingService;
     private final QdrantVectorService qdrantVectorService;
+    private final QdrantCollectionService qdrantCollectionService;
 
     public DocumentService(
             DocumentRepository documentRepository,
@@ -33,7 +35,8 @@ public class DocumentService {
             DocumentExtractionService documentExtractionService,
             TextProcessingService textProcessingService,
             EmbeddingService embeddingService,
-            QdrantVectorService qdrantVectorService
+            QdrantVectorService qdrantVectorService,
+            QdrantCollectionService qdrantCollectionService
     ) {
         this.documentRepository = documentRepository;
         this.userRepository = userRepository;
@@ -42,6 +45,7 @@ public class DocumentService {
         this.textProcessingService = textProcessingService;
         this.embeddingService = embeddingService;
         this.qdrantVectorService = qdrantVectorService;
+        this.qdrantCollectionService = qdrantCollectionService;
     }
 
     public Document uploadDocument(
@@ -54,6 +58,13 @@ public class DocumentService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("User not found")
                 );
+
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read uploaded file", e);
+        }
 
         String storedFilePath =
                 fileStorageService.storeFile(file, userId);
@@ -87,8 +98,8 @@ public class DocumentService {
         try {
 
             extractedText =
-                    documentExtractionService.extractText(
-                            file,
+                    documentExtractionService.extractTextFromBytes(
+                            fileBytes,
                             contentType
                     );
 
@@ -100,40 +111,51 @@ public class DocumentService {
             );
         }
 
+        indexDocumentChunks(savedDocument.getUser().getId(), savedDocument.getId(), extractedText);
+
+        return savedDocument;
+    }
+
+    private int indexDocumentChunks(Long userId, Long documentId, String extractedText) {
+        if (!qdrantCollectionService.isAvailable()) {
+            System.out.println("Qdrant is currently unavailable. Skipping vector indexing for document " + documentId);
+            return 0;
+        }
+
         List<TextChunk> chunks =
                 textProcessingService.createChunks(
-                        savedDocument.getId(),
+                        documentId,
                         extractedText
                 );
 
-        System.out.println("===== CHUNKS =====");
+        if (chunks.isEmpty()) {
+            return 0;
+        }
 
-        for (TextChunk chunk : chunks) {
+        List<String> contents = chunks.stream()
+                .map(TextChunk::getContent)
+                .toList();
 
-            System.out.println(
-                    "Chunk " +
-                            chunk.getChunkIndex() +
-                            ": " +
-                            chunk.getContent()
-            );
+        List<List<Float>> embeddings =
+                embeddingService.generateDocumentEmbeddings(contents);
 
-            List<Float> embedding =
-                    embeddingService.generateDocumentEmbedding(
-                            chunk.getContent()
-                    );
-
-            qdrantVectorService.storeChunkEmbedding(
-                    savedDocument.getUser().getId(),
-                    chunk.getDocumentId(),
-                    chunk.getChunkIndex(),
-                    chunk.getContent(),
-                    embedding
+        List<PointStruct> points = new ArrayList<>(chunks.size());
+        for (int i = 0; i < chunks.size(); i++) {
+            TextChunk chunk = chunks.get(i);
+            List<Float> embedding = embeddings.get(i);
+            points.add(
+                    qdrantVectorService.buildPoint(
+                            userId,
+                            chunk.getDocumentId(),
+                            chunk.getChunkIndex(),
+                            chunk.getContent(),
+                            embedding
+                    )
             );
         }
 
-        System.out.println("==================");
-
-        return savedDocument;
+        qdrantVectorService.storeChunkEmbeddings(points);
+        return chunks.size();
     }
 
     public List<Document> getUserDocuments(Long userId) {
@@ -156,19 +178,7 @@ public class DocumentService {
         try {
             byte[] fileBytes = java.nio.file.Files.readAllBytes(filePath);
             String extractedText = documentExtractionService.extractTextFromBytes(fileBytes, document.getContentType());
-            List<TextChunk> chunks = textProcessingService.createChunks(document.getId(), extractedText);
-
-            for (TextChunk chunk : chunks) {
-                List<Float> embedding = embeddingService.generateDocumentEmbedding(chunk.getContent());
-                qdrantVectorService.storeChunkEmbedding(
-                        document.getUser().getId(),
-                        chunk.getDocumentId(),
-                        chunk.getChunkIndex(),
-                        chunk.getContent(),
-                        embedding
-                );
-            }
-            return chunks.size();
+            return indexDocumentChunks(document.getUser().getId(), document.getId(), extractedText);
         } catch (IOException e) {
             throw new RuntimeException("Failed to read file for re-indexing", e);
         }

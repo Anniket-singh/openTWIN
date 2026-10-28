@@ -27,7 +27,7 @@ public class QdrantVectorService {
         this.collectionName = collectionName;
     }
 
-    public void storeChunkEmbedding(
+    public PointStruct buildPoint(
             Long userId,
             Long documentId,
             int chunkIndex,
@@ -45,37 +45,53 @@ public class QdrantVectorService {
                         .getBytes(StandardCharsets.UTF_8)
         );
 
-        PointStruct point =
-                PointStruct.newBuilder()
-                        .setId(PointIdFactory.id(pointUuid))
-                        .setVectors(VectorsFactory.vectors(embedding))
-                        .putAllPayload(
-                                Map.of(
-                                        "userId",
-                                        ValueFactory.value(userId),
-                                        "documentId",
-                                        ValueFactory.value(documentId),
-                                        "chunkIndex",
-                                        ValueFactory.value(chunkIndex),
-                                        "content",
-                                        ValueFactory.value(content)
-                                )
+        return PointStruct.newBuilder()
+                .setId(PointIdFactory.id(pointUuid))
+                .setVectors(VectorsFactory.vectors(embedding))
+                .putAllPayload(
+                        Map.of(
+                                "userId",
+                                ValueFactory.value(userId),
+                                "documentId",
+                                ValueFactory.value(documentId),
+                                "chunkIndex",
+                                ValueFactory.value(chunkIndex),
+                                "content",
+                                ValueFactory.value(content)
                         )
-                        .build();
+                )
+                .build();
+    }
+
+    public void storeChunkEmbeddings(List<PointStruct> points) {
+        if (points == null || points.isEmpty()) {
+            return;
+        }
 
         try {
             qdrantClient
                     .upsertAsync(
                             collectionName,
-                            List.of(point)
+                            points
                     )
                     .get();
 
         } catch (Exception exception) {
             throw new IllegalStateException(
-                    "Failed to store embedding in Qdrant",
+                    "Failed to store embeddings in Qdrant",
                     exception
             );
         }
+    }
+
+    public void storeChunkEmbedding(
+            Long userId,
+            Long documentId,
+            int chunkIndex,
+            String content,
+            List<Float> embedding) {
+
+        PointStruct point = buildPoint(userId, documentId, chunkIndex, content, embedding);
+        storeChunkEmbeddings(List.of(point));
     }
 }

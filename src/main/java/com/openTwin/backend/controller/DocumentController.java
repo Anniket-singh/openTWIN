@@ -124,33 +124,33 @@ public class DocumentController {
     }
 
     private String resolveContentType(MultipartFile file) {
+        String filename = file.getOriginalFilename();
+        if (filename != null) {
+            String lowerCaseFilename = filename.toLowerCase(Locale.ROOT);
+            if (lowerCaseFilename.endsWith(".pdf")) {
+                return "application/pdf";
+            }
+            if (lowerCaseFilename.endsWith(".docx")) {
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            }
+            if (lowerCaseFilename.endsWith(".txt")) {
+                return "text/plain";
+            }
+        }
 
         String contentType = file.getContentType();
-
-        if (contentType != null &&
-                !contentType.equals("application/octet-stream")) {
-            return contentType;
-        }
-
-        String filename = file.getOriginalFilename();
-
-        if (filename == null) {
-            return null;
-        }
-
-        String lowerCaseFilename =
-                filename.toLowerCase(Locale.ROOT);
-
-        if (lowerCaseFilename.endsWith(".pdf")) {
-            return "application/pdf";
-        }
-
-        if (lowerCaseFilename.endsWith(".docx")) {
-            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        }
-
-        if (lowerCaseFilename.endsWith(".txt")) {
-            return "text/plain";
+        if (contentType != null && !contentType.isBlank()) {
+            String cleanType = contentType.split(";")[0].trim().toLowerCase(Locale.ROOT);
+            if (cleanType.equals("application/pdf") || cleanType.equals("application/x-pdf")) {
+                return "application/pdf";
+            }
+            if (cleanType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document") ||
+                    cleanType.equals("application/docx")) {
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            }
+            if (cleanType.equals("text/plain")) {
+                return "text/plain";
+            }
         }
 
         return null;

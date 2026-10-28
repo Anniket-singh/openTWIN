@@ -7,6 +7,7 @@ import com.google.genai.types.ContentEmbedding;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -24,6 +25,59 @@ public class EmbeddingService {
         this.geminiClient = geminiClient;
         this.embeddingModel = embeddingModel;
         this.embeddingDimension = embeddingDimension;
+    }
+
+    public List<List<Float>> generateDocumentEmbeddings(List<String> texts) {
+        if (texts == null || texts.isEmpty()) {
+            return List.of();
+        }
+
+        List<List<Float>> allVectors = new ArrayList<>(texts.size());
+        int batchSize = 25;
+        EmbedContentConfig config = EmbedContentConfig.builder()
+                .taskType("RETRIEVAL_DOCUMENT")
+                .outputDimensionality(embeddingDimension)
+                .build();
+
+        for (int i = 0; i < texts.size(); i += batchSize) {
+            int toIndex = Math.min(i + batchSize, texts.size());
+            List<String> batch = texts.subList(i, toIndex);
+
+            EmbedContentResponse response =
+                    geminiClient.models.embedContent(
+                            embeddingModel,
+                            batch,
+                            config
+                    );
+
+            List<ContentEmbedding> embeddings =
+                    response.embeddings()
+                            .orElseThrow(() ->
+                                    new IllegalStateException(
+                                            "Gemini returned no embeddings"
+                                    ));
+
+            for (ContentEmbedding embedding : embeddings) {
+                List<Float> vector = embedding.values()
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Gemini returned an embedding without values"
+                                ));
+
+                if (vector.size() != embeddingDimension) {
+                    throw new IllegalStateException(
+                            "Unexpected embedding dimension. Expected "
+                                    + embeddingDimension
+                                    + " but received "
+                                    + vector.size()
+                    );
+                }
+
+                allVectors.add(vector);
+            }
+        }
+
+        return allVectors;
     }
 
     public List<Float> generateDocumentEmbedding(String text) {

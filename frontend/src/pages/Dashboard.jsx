@@ -76,10 +76,10 @@ function Dashboard() {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
-                }
-            );
+            });
 
             setDocuments(response.data);
+            setDocumentsError("");
         } catch (error) {
             console.error("Failed to load documents:", error);
             setDocumentsError("Unable to load your documents.");
@@ -124,7 +124,8 @@ function Dashboard() {
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
-                    }
+                    },
+                    timeout: 90000
                 }
             );
 
