@@ -1,9 +1,14 @@
 import axios from "axios";
 
 const rawBaseUrl = import.meta.env.VITE_API_URL;
-const baseURL = (rawBaseUrl && rawBaseUrl.trim())
+let baseURL = (rawBaseUrl && rawBaseUrl.trim())
     ? rawBaseUrl.trim().replace(/\/+$/, "")
-    : "http://localhost:8080";
+    : "https://opentwin-app-backend.onrender.com";
+
+// If environment variable still points to the old backend URL, redirect to the new active backend
+if (baseURL.includes("opentwin-backend.onrender.com")) {
+    baseURL = baseURL.replace("opentwin-backend.onrender.com", "opentwin-app-backend.onrender.com");
+}
 
 const api = axios.create({
     baseURL,
@@ -13,13 +18,19 @@ const api = axios.create({
     },
 });
 
-// Automatically inject JWT token into requests if available
+// Automatically inject JWT token and handle multipart/form-data
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem("token");
         if (token && !config.headers.Authorization) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // If uploading FormData, delete Content-Type so browser sets boundary automatically
+        if (config.data instanceof FormData) {
+            delete config.headers["Content-Type"];
+        }
+
         return config;
     },
     (error) => Promise.reject(error)
